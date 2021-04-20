@@ -17,6 +17,10 @@
 #include <sys/queue.h>
 #include <ctype.h>
 #include <math.h>
+#include <termios.h>            //termios, TCSANOW, ECHO, ICANON
+#include<sys/types.h>
+#include<sys/stat.h>
+#include <fcntl.h>
 
 enum {
     WALK_OK = 0,
@@ -63,6 +67,10 @@ struct WFDrepository {
     pthread_mutex_t lock;
     pthread_cond_t read_ready;  // wait for count > 0
     pthread_cond_t write_ready; // wait for count < REPOSITORYSIZE
+};
+
+struct JSDrepository {
+
 };
 
 // Linked List struct
@@ -606,23 +614,47 @@ struct Node * findWords(char *fileName, struct Node *WFD_LL, int totalNumberOfWo
 }
 
 int findNumberOfWords(char * fileName) {
+//    static struct termios oldt, newt;
+
+//    /*tcgetattr gets the parameters of the current terminal
+//    STDIN_FILENO will tell tcgetattr that it should write the settings
+//    of stdin to oldt*/
+//    tcgetattr( STDIN_FILENO, &oldt);
+//    /*now the settings will be copied*/
+//    newt = oldt;
+//
+//    /*ICANON normally takes care that one line at a time will be processed
+//    that means it will return if it sees a "\n" or an EOF or an EOL*/
+//    newt.c_lflag &= ~(ICANON);
+//
+//    /*Those new settings will be set to STDIN
+//    TCSANOW tells tcsetattr to change attributes immediately. */
+//    tcsetattr( STDIN_FILENO, TCSANOW, &newt);
+
+//    system ("/bin/stty raw");
+
     char word[100] = "";
     int endOfWordIndex = 0;
     size_t nbytes;
-    ssize_t bytes_read;
+//    ssize_t bytes_read;
     int fd;
-    FILE *fp;
+//    FILE *fp;
     char ch;
     int ENDWORDFLAG = 0;
     int totalNumberOfWords = 0;
 
-    fp = fopen(fileName, "r");
+    fd = open(fileName, O_RDONLY);
 
     nbytes = 1;
-    char letter[2];
-    bytes_read = read(fd, letter, nbytes);
-
-    while((ch = getc(fp)) != EOF) {
+//    char letter[2];
+//    bytes_read = read(fd, letter, nbytes);
+    // read_s <-- int
+    // read_s = read(fd, buffer, count)
+    // make sure read_s is > 0
+    int readBytes = 0;
+    char buffer[1];
+    while((readBytes = read(fd, buffer, 1)) > 0) {
+        ch = buffer[0];
         if (isalnum(ch) || ch == '-') {
             ch = tolower(ch);
 //            printf("%c ", ch);
@@ -656,7 +688,12 @@ int findNumberOfWords(char * fileName) {
     }
     totalNumberOfWords++;
 
-    fclose(fp);
+//    fclose(fp);
+
+//    /*restore the old settings*/
+//    tcsetattr( STDIN_FILENO, TCSANOW, &oldt);
+
+//    system ("/bin/stty cooked");
 
     return totalNumberOfWords;
 }
@@ -667,7 +704,7 @@ struct Node * WFDmain(char* fileName, struct Node *WFD_LL) {
 //    fclose(fp);
 
     int meme = strcmp("2292992", fileName);
-    printf("Reading file: %s \t. . . OK!\n", fileName);
+//    printf("Reading file: %s \t. . . OK!", fileName);
 //    sleep(1);
 //    printf("\t||NOW READING: %d||\n", meme);
 //    fflush(stdout);
@@ -681,8 +718,9 @@ struct Node * WFDmain(char* fileName, struct Node *WFD_LL) {
 
     // returns total number of words in the file
     int totalNumberOfWords = findNumberOfWords(tmp);
+//    int totalNumberOfWords = 10000;
 
-//    printf(" ");
+//    printf("\n");
 //    printf("\t||total number of words: %d||\n", totalNumberOfWords);
 
     // appends words to the linkedList of word frequencies
@@ -910,7 +948,7 @@ int main(int argc, char *argv[]) {
                 }
             }
 
-            printf("\n");
+//            printf("\n");
 
             int comboCounter = 0;
             int comboStart = 0;
