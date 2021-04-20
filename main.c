@@ -42,6 +42,7 @@ enum {
 #define DEBUG_JSD 0
 #define COMBINATIONGENERATOR 1
 #define PRODUCTIONTEST 1
+#define DEBUG_FILEHANDLING 0
 
 // Queue struct
 struct queue {
@@ -76,11 +77,12 @@ struct Node {
 // Basic utility helper methods
 int walk_recur(char *dname, regex_t *reg, int spec, struct queue *Q);
 int walk_dir(char *dname, char *pattern, int spec, struct queue *Q);
-int traverseMain(struct queue *Q);
+int traverseMain(struct queue *Q, char * currElement);
 int queue_init(struct queue *Q);
 int queue_add(struct queue *Q, char * item);
 int queue_remove(struct queue *Q, char *item);
 void queuePrint(struct queue *Q);
+int alreadyExists(struct queue *Q, char * currElement);
 void destroyList(struct Node *head);
 void sortedInsert(struct Node**, struct Node*);
 void insertionSort(struct Node **head_ref);
@@ -106,6 +108,8 @@ double calculateKLDSection(double numerator, double denominator);
 double calculateJSDValue(double KLD_1, double KLD_2);
 int JSDhelper(struct Node *WFD_LL_1, struct Node *WFD_LL_2, char * file1, char * file2);
 int JSDmain(char * file1, char * file2, struct Node * WFD_LL_1, struct Node * WFD_LL_2);
+
+int totalNumberOfFiles = 0;
 
 // ------------------------------- FILE TRAVERSAL HELPERS -------------------------------
 
@@ -158,6 +162,7 @@ int walk_recur(char *dname, regex_t *reg, int spec, struct queue *Q) {
         if (!regexec(reg, fn, 0, 0, 0)) {
 //            puts(fn);
             queue_add(Q, fn);
+            totalNumberOfFiles++;
         }
     }
 
@@ -176,8 +181,8 @@ int walk_dir(char *dname, char *pattern, int spec, struct queue *Q) {
     return res;
 }
 
-int traverseMain(struct queue *Q) {
-    int r = walk_dir("test", ".\\.txt$", WS_DEFAULT|WS_MATCHDIRS, Q);
+int traverseMain(struct queue *Q, char * currElement) {
+    int r = walk_dir(currElement, ".\\.txt$", WS_DEFAULT|WS_MATCHDIRS, Q);
     switch(r) {
         case WALK_OK:		break;
         case WALK_BADIO:	err(1, "IO error");
@@ -186,7 +191,41 @@ int traverseMain(struct queue *Q) {
         default:
             err(1, "Unknown error?");
     }
-    return 0;
+    return EXIT_SUCCESS;
+}
+
+int countNumberOfTextFiles(int argc, char* argv[]) {
+    int totalNumberOfTextFiles = 0;
+    for (int i = 1; i < argc; i++) {
+        char * str = malloc(strlen(argv[i]) * sizeof(char) + 20);
+        strcpy(str, argv[i]);
+        if (strlen(str) > 3 && str[strlen(str)-1] == 't' && str[strlen(str)-2] == 'x' && str[strlen(str)-3] == 't') {
+            totalNumberOfTextFiles++;
+        }
+        free(str);
+    }
+    return totalNumberOfTextFiles;
+}
+
+// takes in a dir/file arguement from main, does the following:
+// checks if it is just a file or a directory, if file, just add to queue IF it doesnt already exist and return. if direcotry, continue
+// if directory, send into traverseMain. the traversal methods
+int fileManager(struct queue *Q, char * currElement) {
+    if (strlen(currElement) > 3 && currElement[strlen(currElement)-1] == 't' && currElement[strlen(currElement)-2] == 'x' && currElement[strlen(currElement)-3] == 't') {
+        //this is a file!
+        int alreadyExist = alreadyExists(Q, currElement);
+        if (alreadyExist) {
+            //element already exists, so just skip it.
+        }
+        else {
+            queue_add(Q, currElement);
+            totalNumberOfFiles++;
+        }
+        return EXIT_SUCCESS;
+    }
+    else {
+        traverseMain(Q, currElement);
+    }
 }
 
 // ------------------------------- END OF FILE TRAVERSAL HELPERS -------------------------------
@@ -259,6 +298,17 @@ void queuePrint(struct queue *Q) {
     for (int i = 0; i < count; i++) {
         printf("Value at %d is %s\n", i, Q->data[i]);
     }
+}
+
+int alreadyExists(struct queue *Q, char * currElement) {
+    int count = Q->count;
+    for (int i = 0; i < count; i++) {
+        if (strcmp(Q->data[i], currElement) == 0) {
+            // already exists, return 1
+            return 1;
+        }
+    }
+    return 0;
 }
 
 // ------------------------------- END OF QUEUE STRUCTURE -------------------------------
@@ -617,7 +667,7 @@ struct Node * WFDmain(char* fileName, struct Node *WFD_LL) {
 //    fclose(fp);
 
     int meme = strcmp("2292992", fileName);
-    printf("Reading file: %d \t\t. . . OK!\n", meme);
+    printf("Reading file: %s \t. . . OK!\n", fileName);
 //    sleep(1);
 //    printf("\t||NOW READING: %d||\n", meme);
 //    fflush(stdout);
@@ -754,7 +804,11 @@ int JSDhelper(struct Node *WFD_LL_1, struct Node *WFD_LL_2, char * file1, char *
     //now that we have both KLDs stored in KLD_1 and KLD_2, we can calculate and return the JSD value.
     double JSD = calculateJSDValue(KLD_1, KLD_2);
 
-    printf("%f %s %s\n", JSD, file1, file2);
+    int numberOfWordsInFile1 = findNumberOfWords(file1);
+    int numberOfWordsInFile2 = findNumberOfWords(file2);
+    int sumOfWords = numberOfWordsInFile1 + numberOfWordsInFile2;
+
+    printf("%f %s %s TOTAL # OF WORDS: %d\n", JSD, file1, file2, sumOfWords);
 }
 
 int JSDmain(char * file1, char * file2, struct Node * WFD_LL_1, struct Node * WFD_LL_2) {
@@ -769,13 +823,36 @@ int JSDmain(char * file1, char * file2, struct Node * WFD_LL_1, struct Node * WF
 
 // ------------------------------- END OF JSD ALGORITHM -------------------------------
 
-int main() {
+int main(int argc, char *argv[]) {
 
-    // Queue
-    // WARNING: fixed size queue, probably gonna bite me in the ass for big test cases, but look i got bigger problems right now.
-    // please dont make directories more than ten thousand characters long :)
+    if (DEBUG_FILEHANDLING) {
+        struct queue Q;
+        queue_init(&Q);
+
+        for (int i = 1; i < argc; i++) {
+            //check for non-thread parameters
+            if (argv[i][0] != '-') {
+                fileManager(&Q, argv[i]);
+            }
+        }
+
+        queuePrint(&Q);
+    }
+
     if (PRODUCTIONTEST) {
 
+//        if (argc < 3) {
+//            perror("NEED MORE PARAMETERS.");
+//            return EXIT_FAILURE;
+//        }
+//        if (countNumberOfTextFiles(argc, argv) < 2) {
+//            perror("NEED MORE FILES.");
+//            return EXIT_FAILURE;
+//        }
+
+        // Queue
+        // WARNING: fixed size queue, probably gonna bite me in the ass for big test cases, but look i got bigger problems right now.
+        // please dont make directories more than ten thousand characters long :)
         struct queue Q;
         queue_init(&Q);
         if (DEBUG_QUEUETEST) {
@@ -793,8 +870,20 @@ int main() {
         }
 
         // Find all text files, bfs search.
-        // WARNING: currently search directory is set to test/. Change this in final production.
-        traverseMain(&Q);
+        // traverseMain(&Q, "test");
+
+        for (int i = 1; i < argc; i++) {
+            //check for non-thread parameters
+            if (argv[i][0] != '-') {
+                fileManager(&Q, argv[i]);
+            }
+        }
+
+        if (totalNumberOfFiles < 2) {
+            perror("NEED MORE FILES!\n");
+            return EXIT_FAILURE;
+        }
+
         if (DEBUG) queuePrint(&Q);
 
         struct WFDrepository repo;
