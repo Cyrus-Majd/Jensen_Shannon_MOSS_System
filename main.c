@@ -87,6 +87,8 @@ struct Node {
 int walk_recur(char *dname, regex_t *reg, int spec, struct queue *Q);
 int walk_dir(char *dname, char *pattern, int spec, struct queue *Q);
 int traverseMain(struct queue *Q, char * currElement);
+int countNumberOfTextFiles(int argc, char* argv[]);
+int fileManager(struct queue *Q, char * currElement);
 int queue_init(struct queue *Q);
 int queue_add(struct queue *Q, char * item);
 int queue_remove(struct queue *Q, char *item);
@@ -117,6 +119,7 @@ double calculateKLDSection(double numerator, double denominator);
 double calculateJSDValue(double KLD_1, double KLD_2);
 int JSDhelper(struct Node *WFD_LL_1, struct Node *WFD_LL_2, char * file1, char * file2, struct JSDrepository *array);
 int JSDmain(char * file1, char * file2, struct Node * WFD_LL_1, struct Node * WFD_LL_2, struct JSDrepository *array);
+int cmp( const void *a, const void *b );
 
 int totalNumberOfFiles = 0;
 int JSDArrayIndex = 0;
@@ -171,8 +174,14 @@ int walk_recur(char *dname, regex_t *reg, int spec, struct queue *Q) {
         /* pattern match */
         if (!regexec(reg, fn, 0, 0, 0)) {
 //            puts(fn);
-            queue_add(Q, fn);
-            totalNumberOfFiles++;
+            if (dname[0] == '.'){
+                //hidden file! skip.
+            }
+            else {
+                queue_add(Q, fn);
+                totalNumberOfFiles++;
+            }
+
         }
     }
 

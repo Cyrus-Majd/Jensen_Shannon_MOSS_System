@@ -44,6 +44,7 @@ Test cases:
 	- Handles duplicate directories
 	- Handles large numbers of files and directories
 	- Handles large text files
+	- Handles hidden files (skips them)
 
 
 :)
