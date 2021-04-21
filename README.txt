@@ -6,6 +6,9 @@ PROJECT II
 AUTHORS: Cyrus Majd [cm1355] and Kayla Kam [kak424]
 
 
+Program Description:
+	A measure of software similarity (MOSS) system that employs the Jenson-Shannon Distance of two files as the basis for comparing similarity
+between those files. This program compares the similarity of .txt files, but can be easily modified to accomodate other kinds of files.
 
 How to use the program:
 
@@ -41,3 +44,6 @@ Test cases:
 	- Handles duplicate directories
 	- Handles large numbers of files and directories
 	- Handles large text files
+
+
+:)
