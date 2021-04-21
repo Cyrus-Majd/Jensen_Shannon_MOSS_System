@@ -69,8 +69,9 @@ struct WFDrepository {
     pthread_cond_t write_ready; // wait for count < REPOSITORYSIZE
 };
 
-struct JSDrepository {
-
+struct JSDrepository {  //this thing stores a the JSD calculation and a wordcount
+    char string[2500];
+    int wordCount;
 };
 
 // Linked List struct
@@ -114,10 +115,11 @@ double average(double frequencyOne, double frequencyTwo, int zeroFlag);
 void traverseWordlist(struct Node *head);
 double calculateKLDSection(double numerator, double denominator);
 double calculateJSDValue(double KLD_1, double KLD_2);
-int JSDhelper(struct Node *WFD_LL_1, struct Node *WFD_LL_2, char * file1, char * file2);
-int JSDmain(char * file1, char * file2, struct Node * WFD_LL_1, struct Node * WFD_LL_2);
+int JSDhelper(struct Node *WFD_LL_1, struct Node *WFD_LL_2, char * file1, char * file2, struct JSDrepository *array);
+int JSDmain(char * file1, char * file2, struct Node * WFD_LL_1, struct Node * WFD_LL_2, struct JSDrepository *array);
 
 int totalNumberOfFiles = 0;
+int JSDArrayIndex = 0;
 
 // ------------------------------- FILE TRAVERSAL HELPERS -------------------------------
 
@@ -766,7 +768,7 @@ double calculateJSDValue(double KLD_1, double KLD_2) {
 }
 
 // calculates JSD between two files
-int JSDhelper(struct Node *WFD_LL_1, struct Node *WFD_LL_2, char * file1, char * file2) {
+int JSDhelper(struct Node *WFD_LL_1, struct Node *WFD_LL_2, char * file1, char * file2, struct JSDrepository *array) {
 //    printList(WFD_LL_1);
 //    printf("\n");
 //    printList(WFD_LL_2);
@@ -846,17 +848,38 @@ int JSDhelper(struct Node *WFD_LL_1, struct Node *WFD_LL_2, char * file1, char *
     int numberOfWordsInFile2 = findNumberOfWords(file2);
     int sumOfWords = numberOfWordsInFile1 + numberOfWordsInFile2;
 
-    printf("%f %s %s TOTAL # OF WORDS: %d\n", JSD, file1, file2, sumOfWords);
+//    printf("%f %s %s TOTAL # OF WORDS: %d\n", JSD, file1, file2, sumOfWords);
+    char totalChar[1000];
+    char snum[10];
+    sprintf(snum,"%f",JSD);
+    strcpy(totalChar, snum);
+    strcat(totalChar, " ");
+    strcat(totalChar, file1);
+    strcat(totalChar, " ");
+    strcat(totalChar, file2);
+    array[JSDArrayIndex].wordCount = sumOfWords;
+    strcpy(array[JSDArrayIndex].string, totalChar);
+//    printf("ADDING %s AT %d\n", totalChar, JSDArrayIndex);
+//    printf("%s %d\n", array[JSDArrayIndex].string, array[JSDArrayIndex].wordCount);
+    JSDArrayIndex++;
 }
 
-int JSDmain(char * file1, char * file2, struct Node * WFD_LL_1, struct Node * WFD_LL_2) {
+int JSDmain(char * file1, char * file2, struct Node * WFD_LL_1, struct Node * WFD_LL_2, struct JSDrepository *array) {
 
-    JSDhelper(WFD_LL_1, WFD_LL_2, file1, file2);
+    JSDhelper(WFD_LL_1, WFD_LL_2, file1, file2, array);
 //        printList(WFD_LL_1);
 //        printf("\n");
 //        printList(WFD_LL_2);
 
     return EXIT_SUCCESS;
+}
+
+int cmp( const void *a, const void *b )
+{
+    const struct JSDrepository *left  = a;
+    const struct JSDrepository *right = b;
+
+    return ( left->wordCount < right->wordCount ) - ( right->wordCount < left->wordCount );
 }
 
 // ------------------------------- END OF JSD ALGORITHM -------------------------------
@@ -950,6 +973,8 @@ int main(int argc, char *argv[]) {
 
 //            printf("\n");
 
+            struct JSDrepository *array = malloc(10000 * sizeof (struct JSDrepository));
+
             int comboCounter = 0;
             int comboStart = 0;
             for (int i = 0; i < repo.count - 1; i++) {
@@ -957,11 +982,24 @@ int main(int argc, char *argv[]) {
 //                printf("FILENAME: %s\n", repo.fileNames[i]);
                 while (comboCounter < repo.count) {
 //                    printf("\t compare to %s\n", repo.fileNames[comboCounter]);
-                    JSDmain(repo.fileNames[i], repo.fileNames[comboCounter], repo.data[i], repo.data[comboCounter]);
+                    JSDmain(repo.fileNames[i], repo.fileNames[comboCounter], repo.data[i], repo.data[comboCounter], array);
                     comboCounter++;
                 }
                 comboStart++;
             }
+
+//            for (int i = 0; i < JSDArrayIndex; i++) {
+//                printf("%s \t|||%d|||\n", array[i].string, array[i].wordCount);
+//            }
+//            printf("%s %d\n", array[2].string, array[2].wordCount);
+            qsort(array, JSDArrayIndex, sizeof( struct JSDrepository ), cmp );
+//            printf("\n");
+
+            for (int i = 0; i < JSDArrayIndex; i++) {
+                printf("%s\n", array[i].string);
+            }
+
+            free(array);
         }
 
         // Clean up WFD repository
@@ -987,7 +1025,7 @@ int main(int argc, char *argv[]) {
 
         insertionSort(&WFD_LL_2);
 
-        JSDhelper(WFD_LL_1, WFD_LL_2, file1, file2);
+//        JSDhelper(WFD_LL_1, WFD_LL_2, file1, file2, );
 //        printList(WFD_LL_1);
 //        printf("\n");
 //        printList(WFD_LL_2);
