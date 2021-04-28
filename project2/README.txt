@@ -3,7 +3,7 @@ PROJECT II
 
 ----=|JENSON SHANNON MEASURE OF SOFTWARE SIMILARITY SYSTEM|=----
 
-AUTHORS: Cyrus Majd [cm1355] and Kayla Kam [kak424]
+AUTHORS: Cyrus Majd
 
 
 Program Description:
